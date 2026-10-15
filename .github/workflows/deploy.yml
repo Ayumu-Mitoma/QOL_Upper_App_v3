@@ -29,10 +29,19 @@ jobs:
       - name: Publish App
         run: dotnet publish QOL_Upper_App_v3.csproj -c Release -o publish
       
+      # ハッシュ付きの .js ファイルを、ハッシュなし名でも複製してフォールバック作成
       - name: Create fallback unhashed assets
         run: |
-          cp publish/wwwroot/_framework/blazor.webassembly.*.js publish/wwwroot/_framework/blazor.webassembly.js || true
-          cp publish/wwwroot/_framework/dotnet.*.js publish/wwwroot/_framework/dotnet.js || true
+          cd publish/wwwroot/_framework
+          for f in blazor.webassembly.*.js dotnet.*.js; do
+            if [ -f "$f" ]; then
+              # ファイル名からハッシュ部分（例: .w3qd1tpl0e や .63wyzs7u22）を取り除いた名前を作成
+              target=$(echo "$f" | sed -E 's/\.[a-z0-9]{10}\.js$/.js/')
+              if [ "$f" != "$target" ]; then
+                cp "$f" "$target"
+              fi
+            fi
+          done
       
       # GitHub Pagesで _framework などのアンダースコアフォルダが無視されるのを防止
       - name: Create .nojekyll
