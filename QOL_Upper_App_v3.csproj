@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <WasmBuildingForNestedWebAssemblyDeploys>true</WasmBuildingForNestedWebAssemblyDeploys>
-    <BlazorEnableFingerprinting>false</BlazorEnableFingerprinting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
