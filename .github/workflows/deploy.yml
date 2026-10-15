@@ -28,7 +28,12 @@ jobs:
       # ローカルで成功したコマンドと同じ設定でビルド
       - name: Publish App
         run: dotnet publish QOL_Upper_App_v3.csproj -c Release -o publish
-
+      
+      - name: Create fallback unhashed assets
+        run: |
+          cp publish/wwwroot/_framework/blazor.webassembly.*.js publish/wwwroot/_framework/blazor.webassembly.js || true
+          cp publish/wwwroot/_framework/dotnet.*.js publish/wwwroot/_framework/dotnet.js || true
+      
       # GitHub Pagesで _framework などのアンダースコアフォルダが無視されるのを防止
       - name: Create .nojekyll
         run: touch publish/wwwroot/.nojekyll
