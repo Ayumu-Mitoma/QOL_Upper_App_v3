@@ -87,7 +87,11 @@ const firebaseConfig = {
               };
     </script>
 
-    <script src="_framework/blazor.webassembly.js"></script>
+    <!-- autostart="false" にして、JS側から Blazor を明示的に起動させる -->
+    <script src="_framework/blazor.webassembly.js" autostart="false"></script>
+    <script>
+      Blazor.start();
+    </script>
 </body>
 
 </html>
