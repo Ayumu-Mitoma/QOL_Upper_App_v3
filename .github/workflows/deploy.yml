@@ -1,0 +1,51 @@
+name: Deploy Blazor WebAssembly to GitHub Pages
+
+on:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # ローカルで成功したコマンドと同じ設定でビルド
+      - name: Publish App
+        run: dotnet publish QOL_Upper_App_v3.csproj -c Release -o publish
+
+      # GitHub Pagesで _framework などのアンダースコアフォルダが無視されるのを防止
+      - name: Create .nojekyll
+        run: touch publish/wwwroot/.nojekyll
+
+      # 生成された wwwroot の【中身】をそのままルートとしてアップロード
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QOL Upper App</title>
+
+    <!-- JSによる動的生成をやめ、直接ベースパスを指定 -->
+     <base href="/QOL_Upper_App_v3/" /> 
+    <!--<base href="/" />-->
+
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <!-- _v3 を追加して修正 -->
+    <link href="QOL_Upper_App_v3.styles.css" rel="stylesheet" />
+</head>
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <!-- Firebase SDK (Compat版) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+              // ★ Firebaseコンソールからコピーした自分の設定値を入れる
+const firebaseConfig = {
+    apiKey: "AIzaSyDrh51GJLmOAFQR5XkoIU9rxTgCcuA3oXY",
+    authDomain: "qol-upper-app.firebaseapp.com",
+    projectId: "qol-upper-app",
+    storageBucket: "qol-upper-app.firebasestorage.app",
+    messagingSenderId: "424123249694",
+    appId: "1:424123249694:web:f023d112c9877a0e3d6a0f"
+};
+
+              // Firebaseの初期化
+              if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+              }
+              const db = firebase.firestore();
+
+              // C# から呼び出すFirebase連携関数
+              window.firebaseInterop = {
+                saveData: async function (collectionName, docId, jsonString) {
+                  try {
+                    const parsedData = JSON.parse(jsonString);
+                    const payload = Array.isArray(parsedData)
+                      ? { items: parsedData }
+                      : parsedData;
+
+                    await db.collection(collectionName).doc(docId).set(payload);
+                    console.log("Firebase Save Success:", collectionName, docId);
+                    return true;
+                  } catch (e) {
+                    console.error("Firebase Save Error:", e);
+                    return false;
+                  }
+                },
+
+                getData: async function (collectionName, docId) {
+                  try {
+                    const doc = await db.collection(collectionName).doc(docId).get();
+                    if (doc.exists) {
+                      const data = doc.data();
+                      const result = data.items !== undefined ? data.items : data;
+                      return JSON.stringify(result);
+                    }
+                    return null;
+                  } catch (e) {
+                    console.error("Firebase Get Error:", e);
+                    return null;
+                  }
+                }
+              };
+    </script>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>

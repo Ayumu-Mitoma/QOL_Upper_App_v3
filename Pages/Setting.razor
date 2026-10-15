@@ -1,0 +1,278 @@
+﻿@page "/settings"
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>設定 - QOL爆上げ大作戦</PageTitle>
+
+<NavigationLock ConfirmExternalNavigation="isHasUnsavedChanges"
+                OnBeforeInternalNavigation="OnBeforeInternalNavigation" />
+
+<div class="settings-container">
+    <header class="app-header" style="margin-bottom: 24px; padding-bottom: 12px; border-bottom: 3px solid #4A322B; display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="app-title" style="color: #4A322B; font-size: 1.8rem; margin: 0; font-weight: bold;">⚙️ 設定</h1>
+        <div class="header-actions" style="display: flex; gap: 10px;">
+            <button class="btn-cancel" disabled="@(!isHasUnsavedChanges)" @onclick="CancelChanges">
+                ↩ 変更を破棄
+            </button>
+            <button class="btn-save" disabled="@(!isHasUnsavedChanges)" @onclick="SaveChanges">
+                💾 設定を保存
+            </button>
+        </div>
+    </header>
+
+    @if (showSavedAlert)
+    {
+        <div class="alert-success" style="background-color: #EBF3EC; border: 2px solid #3E6B48; color: #3E6B48; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: bold; text-align: center;">
+            設定を保存したよ！
+        </div>
+    }
+
+    <div class="mobile-only" style="justify-content: flex-end; gap: 8px; margin-bottom: 12px;">
+        <button class="btn-cancel" disabled="@(!isHasUnsavedChanges)" @onclick="CancelChanges">
+            ↩ 破棄
+        </button>
+        <button class="btn-save" disabled="@(!isHasUnsavedChanges)" @onclick="SaveChanges">
+            💾 保存
+        </button>
+    </div>
+
+    <div class="mobile-only">
+        @if (string.IsNullOrEmpty(selectedMobileTab))
+        {
+            <div class="mobile-settings-menu" style="width: 100%;">
+                <div class="mobile-menu-card" @onclick='() => selectedMobileTab = "家計簿"'>
+                    <span>💳 家計簿の設定</span>
+                    <span class="arrow-icon">▶</span>
+                </div>
+                <div class="mobile-menu-card" @onclick='() => selectedMobileTab = "買い物"'>
+                    <span>🛒 買い物メモの設定</span>
+                    <span class="arrow-icon">▶</span>
+                </div>
+                <div class="mobile-menu-card" @onclick='() => selectedMobileTab = "ほしいもの"'>
+                    <span>🎁 ほしいものリストの設定</span>
+                    <span class="arrow-icon">▶</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="@(string.IsNullOrEmpty(selectedMobileTab) ? "desktop-only" : "settings-layout")">
+        <nav class="settings-nav desktop-only">
+            <button class="nav-tab @(activeTab == "家計簿" ? "active" : "")" @onclick='() => activeTab = "家計簿"'>
+                💳 家計簿
+            </button>
+            <button class="nav-tab @(activeTab == "買い物" ? "active" : "")" @onclick='() => activeTab = "買い物"'>
+                🛒 買い物メモ
+            </button>
+            <button class="nav-tab @(activeTab == "ほしいもの" ? "active" : "")" @onclick='() => activeTab = "ほしいもの"'>
+                🎁 ほしいもの
+            </button>
+        </nav>
+
+        <main class="settings-content" style="width: 100%;">
+            <div class="mobile-only">
+                @if (!string.IsNullOrEmpty(selectedMobileTab))
+                {
+                    <button class="btn-back" @onclick='() => selectedMobileTab = ""'>◀ 設定一覧に戻る</button>
+                }
+            </div>
+
+            @if (CurrentTab == "家計簿")
+            {
+                <div class="card">
+                    <h2 class="card-title">💳 家計簿のカテゴリ設定</h2>
+
+                    <div class="category-group">
+                        <div class="category-group-title">💸 日々の支出カテゴリ</div>
+                        <div class="add-category-form">
+                            <input type="text" class="custom-input" @bind="newDailyCategory" placeholder="新しいカテゴリ名" />
+                            <button class="btn-add" @onclick="AddDailyCategory">＋ 追加</button>
+                        </div>
+                        <div class="category-tag-list">
+                            @foreach (var cat in tempDailyCategories)
+                            {
+                                <span class="category-tag">
+                                    @cat
+                                    <button class="btn-tag-delete" title="削除" @onclick="() => RemoveDailyCategory(cat)">✕</button>
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="category-group">
+                        <div class="category-group-title">💳 固定費カテゴリ</div>
+                        <div class="add-category-form">
+                            <input type="text" class="custom-input" @bind="newFixedCategory" placeholder="新しいカテゴリ名" />
+                            <button class="btn-add" @onclick="AddFixedCategory">＋ 追加</button>
+                        </div>
+                        <div class="category-tag-list">
+                            @foreach (var cat in tempFixedCategories)
+                            {
+                                <span class="category-tag">
+                                    @cat
+                                    <button class="btn-tag-delete" title="削除" @onclick="() => RemoveFixedCategory(cat)">✕</button>
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="category-group">
+                        <div class="category-group-title">💰 収入カテゴリ</div>
+                        <div class="add-category-form">
+                            <input type="text" class="custom-input" @bind="newIncomeCategory" placeholder="新しいカテゴリ名" />
+                            <button class="btn-add" @onclick="AddIncomeCategory">＋ 追加</button>
+                        </div>
+                        <div class="category-tag-list">
+                            @foreach (var cat in tempIncomeCategories)
+                            {
+                                <span class="category-tag">
+                                    @cat
+                                    <button class="btn-tag-delete" title="削除" @onclick="() => RemoveIncomeCategory(cat)">✕</button>
+                                </span>
+                            }
+                        </div>
+                    </div>
+
+                </div>
+            }
+            else if (CurrentTab == "買い物")
+            {
+                <div class="card">
+                    <h2 class="card-title">🛒 買い物メモの設定</h2>
+                    <p class="empty-msg">買い物メモ機能を追加した後に設定項目を配置します。</p>
+                </div>
+            }
+            else if (CurrentTab == "ほしいもの")
+            {
+                <div class="card">
+                    <h2 class="card-title">🎁 ほしいものリストの設定</h2>
+                    <p class="empty-msg">ほしいものリスト機能を追加した後に設定項目を配置します。</p>
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+@code {
+    private string activeTab = "家計簿";
+    private string selectedMobileTab = "";
+    private bool showSavedAlert = false;
+
+    private string CurrentTab => !string.IsNullOrEmpty(selectedMobileTab) ? selectedMobileTab : activeTab;
+
+    private List<string> savedDailyCategories = new() { "食費", "日用品", "趣味・娯楽", "交通費", "交際費", "その他" };
+    private List<string> savedFixedCategories = new() { "電気代", "ガス代", "水道代", "クレカ", "家賃", "通信費・サブスク", "その他" };
+    private List<string> savedIncomeCategories = new() { "給料", "副収入", "ボーナス", "臨時収入", "その他" };
+
+    private List<string> tempDailyCategories = new();
+    private List<string> tempFixedCategories = new();
+    private List<string> tempIncomeCategories = new();
+
+    private string newDailyCategory = "";
+    private string newFixedCategory = "";
+    private string newIncomeCategory = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCategoriesFromLocalStorage();
+            ResetTempData();
+            StateHasChanged();
+        }
+    }
+
+    private void ResetTempData()
+    {
+        tempDailyCategories = new List<string>(savedDailyCategories);
+        tempFixedCategories = new List<string>(savedFixedCategories);
+        tempIncomeCategories = new List<string>(savedIncomeCategories);
+    }
+
+    private bool isHasUnsavedChanges =>
+        !tempDailyCategories.SequenceEqual(savedDailyCategories) ||
+        !tempFixedCategories.SequenceEqual(savedFixedCategories) ||
+        !tempIncomeCategories.SequenceEqual(savedIncomeCategories);
+
+    private void AddDailyCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(newDailyCategory) && !tempDailyCategories.Contains(newDailyCategory))
+        {
+            tempDailyCategories.Add(newDailyCategory);
+            newDailyCategory = "";
+        }
+    }
+    private void RemoveDailyCategory(string cat) => tempDailyCategories.Remove(cat);
+
+    private void AddFixedCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(newFixedCategory) && !tempFixedCategories.Contains(newFixedCategory))
+        {
+            tempFixedCategories.Add(newFixedCategory);
+            newFixedCategory = "";
+        }
+    }
+    private void RemoveFixedCategory(string cat) => tempFixedCategories.Remove(cat);
+
+    private void AddIncomeCategory()
+    {
+        if (!string.IsNullOrWhiteSpace(newIncomeCategory) && !tempIncomeCategories.Contains(newIncomeCategory))
+        {
+            tempIncomeCategories.Add(newIncomeCategory);
+            newIncomeCategory = "";
+        }
+    }
+    private void RemoveIncomeCategory(string cat) => tempIncomeCategories.Remove(cat);
+
+    private async Task SaveChanges()
+    {
+        savedDailyCategories = new List<string>(tempDailyCategories);
+        savedFixedCategories = new List<string>(tempFixedCategories);
+        savedIncomeCategories = new List<string>(tempIncomeCategories);
+
+        // LocalStorageに保存
+        await JS.InvokeVoidAsync("localStorage.setItem", "dailyCategories", System.Text.Json.JsonSerializer.Serialize(savedDailyCategories));
+        await JS.InvokeVoidAsync("localStorage.setItem", "fixedCategories", System.Text.Json.JsonSerializer.Serialize(savedFixedCategories));
+        await JS.InvokeVoidAsync("localStorage.setItem", "incomeCategories", System.Text.Json.JsonSerializer.Serialize(savedIncomeCategories));
+
+        showSavedAlert = true;
+        StateHasChanged();
+    }
+
+    private void CancelChanges()
+    {
+        ResetTempData();
+        showSavedAlert = false;
+    }
+
+    private async Task LoadCategoriesFromLocalStorage()
+    {
+        try
+        {
+            var dailyJson = await JS.InvokeAsync<string>("localStorage.getItem", "dailyCategories");
+            if (!string.IsNullOrEmpty(dailyJson))
+                savedDailyCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dailyJson) ?? savedDailyCategories;
+
+            var fixedJson = await JS.InvokeAsync<string>("localStorage.getItem", "fixedCategories");
+            if (!string.IsNullOrEmpty(fixedJson))
+                savedFixedCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(fixedJson) ?? savedFixedCategories;
+
+            var incomeJson = await JS.InvokeAsync<string>("localStorage.getItem", "incomeCategories");
+            if (!string.IsNullOrEmpty(incomeJson))
+                savedIncomeCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(incomeJson) ?? savedIncomeCategories;
+        }
+        catch { }
+    }
+
+    private async Task OnBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (isHasUnsavedChanges)
+        {
+            var isConfirm = await JS.InvokeAsync<bool>("confirm", "設定の変更が保存されていません。保存せずに移動しますか？");
+            if (!isConfirm)
+            {
+                context.PreventNavigation();
+            }
+        }
+    }
+}

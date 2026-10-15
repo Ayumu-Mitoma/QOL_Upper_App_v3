@@ -1,0 +1,541 @@
+﻿@page "/"
+@page "/account-book"
+@inject IJSRuntime JS
+@inject QOL_Upper_App_v3.Services.FirebaseService Firebase
+
+<PageTitle>家計簿 - QOL爆上げ大作戦</PageTitle>
+
+<div class="app-container">
+    <header class="app-header">
+        <h1 class="app-title">📖 家計簿</h1>
+    </header>
+
+    <div class="main-layout @(showDailyExpenseSection ? "" : "centered")">
+
+        <section class="left-panel">
+
+            <div class="card monthly-summary-card">
+                <h3 class="card-title" style="margin-bottom: 12px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
+
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <span class="summary-label">今月の収入</span>
+                        <span class="summary-val text-success">+¥@CurrentMonthIncome.ToString("N0")</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="summary-label">今月の総支出</span>
+                        <span class="summary-val text-danger">-¥@MonthlyTotalExpense.ToString("N0")</span>
+                    </div>
+                    <div class="summary-box">
+                        <span class="summary-label">収支バランス</span>
+                        <span class="summary-val @(MonthlyNetBalance >= 0 ? "text-success" : "text-danger")">
+                            @(MonthlyNetBalance >= 0 ? "+" : "")¥@MonthlyNetBalance.ToString("N0")
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card calendar-card">
+                <div class="calendar-header">
+                    <button class="btn-nav" @onclick="PrevMonth">◀ 前月</button>
+                    <div class="month-title">@currentMonth.ToString("yyyy年 MM月")</div>
+                    <button class="btn-nav" @onclick="NextMonth">次月 ▶</button>
+                </div>
+
+                <div class="calendar-grid">
+                    <div class="weekday-header sun">日</div>
+                    <div class="weekday-header">月</div>
+                    <div class="weekday-header">火</div>
+                    <div class="weekday-header">水</div>
+                    <div class="weekday-header">木</div>
+                    <div class="weekday-header">金</div>
+                    <div class="weekday-header sat">土</div>
+
+                    @foreach (var day in CalendarDays)
+                    {
+                        var isSelected = day.Date == selectedDate.Date;
+                        var isOtherMonth = day.Month != currentMonth.Month;
+                        var isToday = day.Date == DateTime.Today;
+                        var isSat = day.DayOfWeek == DayOfWeek.Saturday;
+                        var isSun = day.DayOfWeek == DayOfWeek.Sunday;
+                        var holidayName = GetHolidayName(day);
+                        var isHoliday = !string.IsNullOrEmpty(holidayName);
+                        var dayExpense = GetDayExpense(day);
+
+                        <div class="calendar-cell @(isOtherMonth ? "other-month" : "") @(isSelected ? "selected" : "") @(isToday ? "today" : "") @(isSat ? "is-saturday" : "") @(isSun ? "is-sunday" : "") @(isHoliday ? "is-holiday" : "")"
+                             @onclick="() => SelectDate(day)">
+                            <span class="day-number">@day.Day</span>
+                            @if (!string.IsNullOrEmpty(holidayName) && !isOtherMonth)
+                            {
+                                <span class="holiday-name">@holidayName</span>
+                            }
+                            @if (dayExpense > 0)
+                            {
+                                <span class="day-expense">-¥@dayExpense.ToString("N0")</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card month-setting-card">
+                <h3 class="card-title" style="margin-bottom: 12px;">⚙️ @currentMonth.ToString("yyyy/MM") の内訳</h3>
+
+                <div class="month-breakdown-container">
+
+                    <div class="breakdown-column">
+                        <div class="breakdown-header">
+                            <div>
+                                <span>今月の収入</span>
+                                <div class="text-success" style="font-size: 1.05rem;">+¥@CurrentMonthIncome.ToString("N0")</div>
+                            </div>
+                            <button class="btn-action-small" @onclick='() => activeModalMode = "収入"'>＋ 収入を入力</button>
+                        </div>
+                        @if (!CurrentMonthIncomeItems.Any())
+                        {
+                            <p class="empty-msg">収入の登録はありません</p>
+                        }
+                        else
+                        {
+                            <ul class="item-list">
+                                @foreach (var item in CurrentMonthIncomeItems)
+                                {
+                                    <li class="item-row">
+                                        <div class="item-info">
+                                            <span class="badge badge-income">@item.Category</span>
+                                            <span class="item-memo">@(string.IsNullOrEmpty(item.Memo) ? item.Category : item.Memo)</span>
+                                        </div>
+                                        <div class="item-actions">
+                                            <span class="item-amount text-success">+¥@item.Amount.ToString("N0")</span>
+                                            <button class="btn-delete" @onclick="() => DeleteIncome(item.Id)">×</button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+
+                    <div class="breakdown-column">
+                        <div class="breakdown-header">
+                            <div>
+                                <span>今月の固定費</span>
+                                <div class="text-danger" style="font-size: 1.05rem;">-¥@CurrentMonthFixedExpense.ToString("N0")</div>
+                            </div>
+                            <button class="btn-action-small" @onclick='() => activeModalMode = "固定費"'>＋ 固定費を入力</button>
+                        </div>
+                        @if (!CurrentMonthFixedItems.Any())
+                        {
+                            <p class="empty-msg">固定費の登録はありません</p>
+                        }
+                        else
+                        {
+                            <ul class="item-list">
+                                @foreach (var item in CurrentMonthFixedItems)
+                                {
+                                    <li class="item-row">
+                                        <div class="item-info">
+                                            <span class="badge badge-fixed">@item.Category</span>
+                                            <span class="item-memo">@(string.IsNullOrEmpty(item.Memo) ? item.Category : item.Memo)</span>
+                                        </div>
+                                        <div class="item-actions">
+                                            <span class="item-amount text-danger">-¥@item.Amount.ToString("N0")</span>
+                                            <button class="btn-delete" @onclick="() => DeleteExpense(item.Id)">×</button>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+        @if (showDailyExpenseSection)
+        {
+            <section class="right-panel">
+                <div class="card list-card">
+                    <div class="selected-day-banner" style="margin-bottom: 12px;">
+                        <span class="selected-date-text">
+                            📅 @selectedDate.ToString("yyyy/MM/dd(ddd)")
+                        </span>
+                        <span class="text-danger" style="font-weight: bold;">
+                            本日支出: -¥@SelectedDayExpense.ToString("N0")
+                        </span>
+                    </div>
+
+                    <div class="card-title">
+                        <span>📋 本日 (@selectedDate.ToString("MM/dd")) の支出明細</span>
+                        <button class="btn-close" title="明細と入力欄を閉じる" @onclick="() => showDailyExpenseSection = false">✕</button>
+                    </div>
+
+                    @if (!SelectedDayItems.Any())
+                    {
+                        <p class="empty-msg">この日の支出はありません。</p>
+                    }
+                    else
+                    {
+                        <ul class="item-list">
+                            @foreach (var item in SelectedDayItems)
+                            {
+                                <li class="item-row">
+                                    <div class="item-info">
+                                        <span class="badge">@item.Category</span>
+                                        <span class="item-memo">@(string.IsNullOrEmpty(item.Memo) ? item.Category : item.Memo)</span>
+                                    </div>
+                                    <div class="item-actions">
+                                        <span class="item-amount text-danger">-¥@item.Amount.ToString("N0")</span>
+                                        <button class="btn-delete" @onclick="() => DeleteExpense(item.Id)">×</button>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+
+                <div class="card form-card">
+                    <h3 class="card-title">💸 支出を入力</h3>
+
+                    <EditForm Model="newDailyExpenseItem" OnValidSubmit="AddDailyExpense">
+                        <div class="vertical-form-grid">
+                            <div class="form-group">
+                                <label>カテゴリ</label>
+                                <select class="custom-input" @bind="newDailyExpenseItem.Category">
+                                    @foreach (var cat in dailyCategories)
+                                    {
+                                        <option value="@cat">@cat</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>金額 (円)</label>
+                                <input type="number" class="custom-input-number" @bind="newDailyExpenseItem.Amount" placeholder="0" min="0" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>メモ</label>
+                                <input type="text" class="custom-input" @bind="newDailyExpenseItem.Memo" placeholder="例: スーパーで買出し" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">本日の支出に追加する</button>
+                    </EditForm>
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@if (activeModalMode == "収入")
+{
+    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="card-title" style="margin-bottom: 20px;">
+                <span>💰 今月の収入を入力</span>
+                <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+            </div>
+            <EditForm Model="newIncomeItem" OnValidSubmit="AddIncome">
+                <div class="vertical-form-grid">
+                    <div class="form-group">
+                        <label>カテゴリ</label>
+                        <select class="custom-input" @bind="newIncomeItem.Category">
+                            @foreach (var cat in incomeCategories)
+                            {
+                                <option value="@cat">@cat</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>金額 (円)</label>
+                        <input type="number" class="custom-input-number" @bind="newIncomeItem.Amount" placeholder="0" min="0" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>メモ</label>
+                        <input type="text" class="custom-input" @bind="newIncomeItem.Memo" placeholder="例: 〇〇月分給与" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-success">今月の収入に追加する</button>
+            </EditForm>
+        </div>
+    </div>
+}
+else if (activeModalMode == "固定費")
+{
+    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="card-title" style="margin-bottom: 20px;">
+                <span>💳 今月の固定費を入力</span>
+                <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+            </div>
+            <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
+                <div class="vertical-form-grid">
+                    <div class="form-group">
+                        <label>カテゴリ</label>
+                        <select class="custom-input" @bind="newFixedExpenseItem.Category">
+                            @foreach (var cat in fixedCategories)
+                            {
+                                <option value="@cat">@cat</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>金額 (円)</label>
+                        <input type="number" class="custom-input-number" @bind="newFixedExpenseItem.Amount" placeholder="0" min="0" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>メモ</label>
+                        <input type="text" class="custom-input" @bind="newFixedExpenseItem.Memo" placeholder="例: 10月分電気代" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-fixed">今月の固定費に追加する</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private DateTime currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime selectedDate = DateTime.Today;
+
+    private List<ExpenseItem> expenseItems = new();
+    private List<IncomeItem> incomeItems = new();
+
+    // 設定から読み込むカテゴリリスト
+    private List<string> dailyCategories = new() { "食費", "日用品", "趣味・娯楽", "交通費", "交際費", "その他" };
+    private List<string> fixedCategories = new() { "電気代", "ガス代", "水道代", "クレカ", "家賃", "通信費・サブスク", "その他" };
+    private List<string> incomeCategories = new() { "給料", "副収入", "ボーナス", "臨時収入", "その他" };
+
+    private string activeModalMode = "なし";
+    private bool showDailyExpenseSection = false;
+
+    private ExpenseItem newDailyExpenseItem = new();
+    private ExpenseItem newFixedExpenseItem = new();
+    private IncomeItem newIncomeItem = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadDataFromLocalStorage();
+            InitFormCategories();
+            StateHasChanged();
+        }
+    }
+
+    private void InitFormCategories()
+    {
+        if (dailyCategories.Any()) newDailyExpenseItem.Category = dailyCategories.First();
+        if (fixedCategories.Any()) newFixedExpenseItem.Category = fixedCategories.First();
+        if (incomeCategories.Any()) newIncomeItem.Category = incomeCategories.First();
+    }
+
+    private List<DateTime> CalendarDays
+    {
+        get
+        {
+            var days = new List<DateTime>();
+            var firstDayOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1);
+            int startDateOffset = (int)firstDayOfMonth.DayOfWeek;
+            var startDate = firstDayOfMonth.AddDays(-startDateOffset);
+
+            for (int i = 0; i < 35; i++)
+            {
+                days.Add(startDate.AddDays(i));
+            }
+            return days;
+        }
+    }
+
+    private IEnumerable<ExpenseItem> SelectedDayItems =>
+        expenseItems.Where(x => !x.IsFixed && x.Date.Date == selectedDate.Date);
+
+    private decimal SelectedDayExpense => SelectedDayItems.Sum(x => x.Amount);
+
+    private IEnumerable<ExpenseItem> CurrentMonthFixedItems =>
+        expenseItems.Where(x => x.IsFixed && x.Date.Year == currentMonth.Year && x.Date.Month == currentMonth.Month);
+
+    private decimal CurrentMonthFixedExpense => CurrentMonthFixedItems.Sum(x => x.Amount);
+
+    private decimal CurrentMonthDailyExpense =>
+        expenseItems.Where(x => !x.IsFixed && x.Date.Year == currentMonth.Year && x.Date.Month == currentMonth.Month)
+                    .Sum(x => x.Amount);
+
+    private decimal MonthlyTotalExpense => CurrentMonthDailyExpense + CurrentMonthFixedExpense;
+
+    private IEnumerable<IncomeItem> CurrentMonthIncomeItems =>
+        incomeItems.Where(x => x.Date.Year == currentMonth.Year && x.Date.Month == currentMonth.Month);
+
+    private decimal CurrentMonthIncome => CurrentMonthIncomeItems.Sum(x => x.Amount);
+
+    private decimal MonthlyNetBalance => CurrentMonthIncome - MonthlyTotalExpense;
+
+    private decimal GetDayExpense(DateTime date) =>
+        expenseItems.Where(x => !x.IsFixed && x.Date.Date == date.Date).Sum(x => x.Amount);
+
+    private void SelectDate(DateTime date)
+    {
+        selectedDate = date;
+        showDailyExpenseSection = true;
+    }
+
+    private void PrevMonth() => currentMonth = currentMonth.AddMonths(-1);
+    private void NextMonth() => currentMonth = currentMonth.AddMonths(1);
+
+    private async Task AddDailyExpense()
+    {
+        if (newDailyExpenseItem.Amount <= 0) return;
+
+        expenseItems.Add(new ExpenseItem
+        {
+            Id = Guid.NewGuid(),
+            Date = selectedDate,
+            Category = newDailyExpenseItem.Category,
+            Amount = newDailyExpenseItem.Amount,
+            Memo = newDailyExpenseItem.Memo,
+            IsFixed = false
+        });
+
+        await SaveDataToLocalStorage();
+        newDailyExpenseItem = new ExpenseItem { Category = dailyCategories.FirstOrDefault() ?? "食費" };
+    }
+
+    private async Task AddFixedExpense()
+    {
+        if (newFixedExpenseItem.Amount <= 0) return;
+
+        expenseItems.Add(new ExpenseItem
+        {
+            Id = Guid.NewGuid(),
+            Date = currentMonth,
+            Category = newFixedExpenseItem.Category,
+            Amount = newFixedExpenseItem.Amount,
+            Memo = newFixedExpenseItem.Memo,
+            IsFixed = true
+        });
+
+        await SaveDataToLocalStorage();
+        newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
+        activeModalMode = "なし";
+    }
+
+    private async Task DeleteExpense(Guid id)
+    {
+        expenseItems.RemoveAll(x => x.Id == id);
+        await SaveDataToLocalStorage();
+    }
+
+    private async Task AddIncome()
+    {
+        if (newIncomeItem.Amount <= 0) return;
+
+        incomeItems.Add(new IncomeItem
+        {
+            Id = Guid.NewGuid(),
+            Date = currentMonth,
+            Category = newIncomeItem.Category,
+            Amount = newIncomeItem.Amount,
+            Memo = newIncomeItem.Memo
+        });
+
+        await SaveDataToLocalStorage();
+        newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
+        activeModalMode = "なし";
+    }
+
+    private async Task DeleteIncome(Guid id)
+    {
+        incomeItems.RemoveAll(x => x.Id == id);
+        await SaveDataToLocalStorage();
+    }
+
+    // LocalStorage から Firebase への保存・読み込み処理に変更
+    private async Task SaveDataToLocalStorage()
+    {
+        // 支出データ
+        await Firebase.SaveDataAsync("account_data", "expenses", expenseItems);
+        // 収入データ
+        await Firebase.SaveDataAsync("account_data", "incomes", incomeItems);
+    }
+
+    private async Task LoadDataFromLocalStorage()
+    {
+        try
+        {
+            var loadedExpenses = await Firebase.GetDataAsync<List<ExpenseItem>>("account_data", "expenses");
+            if (loadedExpenses != null) expenseItems = loadedExpenses;
+
+            var loadedIncomes = await Firebase.GetDataAsync<List<IncomeItem>>("account_data", "incomes");
+            if (loadedIncomes != null) incomeItems = loadedIncomes;
+
+            // カテゴリ設定は今まで通りLocalStorageから取得
+            var dailyJson = await JS.InvokeAsync<string>("localStorage.getItem", "dailyCategories");
+            if (!string.IsNullOrEmpty(dailyJson))
+                dailyCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dailyJson) ?? dailyCategories;
+
+            var fixedJson = await JS.InvokeAsync<string>("localStorage.getItem", "fixedCategories");
+            if (!string.IsNullOrEmpty(fixedJson))
+                fixedCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(fixedJson) ?? fixedCategories;
+
+            var incomeCategoryJson = await JS.InvokeAsync<string>("localStorage.getItem", "incomeCategories");
+            if (!string.IsNullOrEmpty(incomeCategoryJson))
+                incomeCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(incomeCategoryJson) ?? incomeCategories;
+        }
+        catch { }
+    }
+
+
+    private string GetHolidayName(DateTime date)
+    {
+        int month = date.Month;
+        int day = date.Day;
+
+        if (month == 1 && day == 1) return "元日";
+        if (month == 1 && isNthDayOfWeek(date, 2, DayOfWeek.Monday)) return "成人の日";
+        if (month == 2 && day == 11) return "建国記念の日";
+        if (month == 2 && day == 23) return "天皇誕生日";
+        if (month == 3 && day == 20) return "春分の日";
+        if (month == 4 && day == 29) return "昭和の日";
+        if (month == 5 && day == 3) return "憲法記念日";
+        if (month == 5 && day == 4) return "みどりの日";
+        if (month == 5 && day == 5) return "こどもの日";
+        if (month == 7 && isNthDayOfWeek(date, 3, DayOfWeek.Monday)) return "海の日";
+        if (month == 8 && day == 11) return "山の日";
+        if (month == 9 && isNthDayOfWeek(date, 3, DayOfWeek.Monday)) return "敬老の日";
+        if (month == 9 && day == 23) return "秋分の日";
+        if (month == 10 && isNthDayOfWeek(date, 2, DayOfWeek.Monday)) return "スポーツの日";
+        if (month == 11 && day == 3) return "文化の日";
+        if (month == 11 && day == 23) return "勤労感謝の日";
+
+        return string.Empty;
+    }
+
+    private bool isNthDayOfWeek(DateTime date, int nth, DayOfWeek dayOfWeek) =>
+        date.DayOfWeek == dayOfWeek && (date.Day - 1) / 7 + 1 == nth;
+
+    public class ExpenseItem
+    {
+        public Guid Id { get; set; }
+        public DateTime Date { get; set; } = DateTime.Today;
+        public string Category { get; set; } = "食費";
+        public decimal Amount { get; set; }
+        public string? Memo { get; set; }
+        public bool IsFixed { get; set; } = false;
+    }
+
+    public class IncomeItem
+    {
+        public Guid Id { get; set; }
+        public DateTime Date { get; set; } = DateTime.Today;
+        public string Category { get; set; } = "給料";
+        public decimal Amount { get; set; }
+        public string? Memo { get; set; }
+    }
+}

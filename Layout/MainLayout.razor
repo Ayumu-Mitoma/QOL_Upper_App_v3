@@ -1,0 +1,49 @@
+﻿@inherits LayoutComponentBase
+
+<div class="app-layout">
+    <!-- 上部固定ヘッダーナビゲーション -->
+    <header class="top-nav">
+        <a href="" class="nav-brand">QOL爆上げアプリ</a>
+
+        <!-- PC用メニュー -->
+        <div class="nav-links pc-nav">
+            <NavLink class="nav-item" href="" Match="NavLinkMatch.All">📖 家計簿</NavLink>
+            <NavLink class="nav-item" href="settings">⚙️ 設定</NavLink>
+        </div>
+
+        <!-- スマホ用ハンバーガーボタン -->
+        <button class="hamburger-btn mobile-only" @onclick="ToggleMenu" aria-label="メニュー開閉">
+            <span class="hamburger-icon">@(isMenuOpen ? "✕" : "☰")</span>
+        </button>
+    </header>
+
+    <!-- スマホ用ドロップダウンメニュー -->
+    @if (isMenuOpen)
+    {
+        <div class="mobile-menu-overlay" @onclick="CloseMenu">
+            <nav class="mobile-menu" @onclick:stopPropagation>
+                <NavLink class="mobile-nav-item" href="" Match="NavLinkMatch.All" @onclick="CloseMenu">📖 家計簿</NavLink>
+                <NavLink class="mobile-nav-item" href="settings" @onclick="CloseMenu">⚙️ 設定</NavLink>
+            </nav>
+        </div>
+    }
+
+    <!-- メインコンテンツ領域 -->
+    <main class="main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    private bool isMenuOpen = false;
+
+    private void ToggleMenu()
+    {
+        isMenuOpen = !isMenuOpen;
+    }
+
+    private void CloseMenu()
+    {
+        isMenuOpen = false;
+    }
+}
