@@ -1,4 +1,5 @@
 ﻿using Microsoft.JSInterop;
+//using QOL_Upper_App_v3.Models;
 using System.Text.Json;
 
 namespace QOL_Upper_App_v3.Services
@@ -6,6 +7,7 @@ namespace QOL_Upper_App_v3.Services
     public class FirebaseService
     {
         private readonly IJSRuntime _jsRuntime;
+        private const string CategoryCollection = "categories";
 
         public FirebaseService(IJSRuntime jsRuntime)
         {
@@ -24,5 +26,7 @@ namespace QOL_Upper_App_v3.Services
             if (string.IsNullOrEmpty(json)) return default;
             return JsonSerializer.Deserialize<T>(json);
         }
+
+        
     }
 }

@@ -1,7 +1,8 @@
 ﻿@page "/"
 @page "/account-book"
+@using QOL_Upper_App_v3.Services
 @inject IJSRuntime JS
-@inject QOL_Upper_App_v3.Services.FirebaseService Firebase
+@inject FirebaseService FirebaseService
 
 <PageTitle>家計簿 - QOL爆上げ大作戦</PageTitle>
 
@@ -12,8 +13,10 @@
 
     <div class="main-layout @(showDailyExpenseSection ? "" : "centered")">
 
+        <!-- 左パネル：月間サマリー、カレンダー、固定費・収入の内訳 -->
         <section class="left-panel">
 
+            <!-- 月間サマリーカード -->
             <div class="card monthly-summary-card">
                 <h3 class="card-title" style="margin-bottom: 12px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
 
@@ -35,6 +38,7 @@
                 </div>
             </div>
 
+            <!-- カレンダーカード -->
             <div class="card calendar-card">
                 <div class="calendar-header">
                     <button class="btn-nav" @onclick="PrevMonth">◀ 前月</button>
@@ -78,11 +82,13 @@
                 </div>
             </div>
 
+            <!-- 今月の内訳（収入・固定費）カード -->
             <div class="card month-setting-card">
                 <h3 class="card-title" style="margin-bottom: 12px;">⚙️ @currentMonth.ToString("yyyy/MM") の内訳</h3>
 
                 <div class="month-breakdown-container">
 
+                    <!-- 今月の収入 -->
                     <div class="breakdown-column">
                         <div class="breakdown-header">
                             <div>
@@ -115,6 +121,7 @@
                         }
                     </div>
 
+                    <!-- 今月の固定費 -->
                     <div class="breakdown-column">
                         <div class="breakdown-header">
                             <div>
@@ -152,6 +159,7 @@
 
         </section>
 
+        <!-- 右パネル：選択日の日別支出明細 ＆ 入力フォーム -->
         @if (showDailyExpenseSection)
         {
             <section class="right-panel">
@@ -228,6 +236,7 @@
     </div>
 </div>
 
+<!-- モーダルダイアログ：収入入力 -->
 @if (activeModalMode == "収入")
 {
     <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
@@ -264,51 +273,53 @@
         </div>
     </div>
 }
+<!-- モーダルダイアログ：固定費入力 -->
 else if (activeModalMode == "固定費")
 {
-    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
-        <div class="modal-card" @onclick:stopPropagation>
-            <div class="card-title" style="margin-bottom: 20px;">
-                <span>💳 今月の固定費を入力</span>
-                <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
-            </div>
-            <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
-                <div class="vertical-form-grid">
-                    <div class="form-group">
-                        <label>カテゴリ</label>
-                        <select class="custom-input" @bind="newFixedExpenseItem.Category">
-                            @foreach (var cat in fixedCategories)
-                            {
-                                <option value="@cat">@cat</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>金額 (円)</label>
-                        <input type="number" class="custom-input-number" @bind="newFixedExpenseItem.Amount" placeholder="0" min="0" />
-                    </div>
-
-                    <div class="form-group">
-                        <label>メモ</label>
-                        <input type="text" class="custom-input" @bind="newFixedExpenseItem.Memo" placeholder="例: 10月分電気代" />
-                    </div>
+<div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+    <div class="modal-card" @onclick:stopPropagation>
+        <div class="card-title" style="margin-bottom: 20px;">
+            <span>💳 今月の固定費を入力</span>
+            <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+        </div>
+        <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
+            <div class="vertical-form-grid">
+                <div class="form-group">
+                    <label>カテゴリ</label>
+                    <select class="custom-input" @bind="newFixedExpenseItem.Category">
+                        @foreach (var cat in fixedCategories)
+                        {
+                            <option value="@cat">@cat</option>
+                        }
+                    </select>
                 </div>
 
-                <button type="submit" class="btn-fixed">今月の固定費に追加する</button>
-            </EditForm>
-        </div>
+                <div class="form-group">
+                    <label>金額 (円)</label>
+                    <input type="number" class="custom-input-number" @bind="newFixedExpenseItem.Amount" placeholder="0" min="0" />
+                </div>
+
+                <div class="form-group">
+                    <label>メモ</label>
+                    <input type="text" class="custom-input" @bind="newFixedExpenseItem.Memo" placeholder="例: 10月分電気代" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn-fixed">今月の固定費に追加する</button>
+        </EditForm>
     </div>
+</div>
 }
 
 @code {
+    // 状態管理用フィールド
     private DateTime currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime selectedDate = DateTime.Today;
 
     private List<ExpenseItem> expenseItems = new();
     private List<IncomeItem> incomeItems = new();
 
-    // 設定から読み込むカテゴリリスト
+    // デフォルトカテゴリ（Firestoreから取得できない場合のフォールバック値）
     private List<string> dailyCategories = new() { "食費", "日用品", "趣味・娯楽", "交通費", "交際費", "その他" };
     private List<string> fixedCategories = new() { "電気代", "ガス代", "水道代", "クレカ", "家賃", "通信費・サブスク", "その他" };
     private List<string> incomeCategories = new() { "給料", "副収入", "ボーナス", "臨時収入", "その他" };
@@ -316,20 +327,48 @@ else if (activeModalMode == "固定費")
     private string activeModalMode = "なし";
     private bool showDailyExpenseSection = false;
 
+    // 入力フォームバインディング用モデル
     private ExpenseItem newDailyExpenseItem = new();
     private ExpenseItem newFixedExpenseItem = new();
     private IncomeItem newIncomeItem = new();
+
+    // Firestore保存用データ構造
+    public class CategorySettingsData
+    {
+        public List<string> DailyCategories { get; set; } = new();
+        public List<string> FixedCategories { get; set; } = new();
+        public List<string> IncomeCategories { get; set; } = new();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadDataFromLocalStorage();
+            // Firestoreから収支データとカテゴリ設定を読み込む
+            await LoadAccountDataAsync();
+            await LoadCategoriesFromFirestoreAsync();
             InitFormCategories();
             StateHasChanged();
         }
     }
 
+    // Firestoreからカテゴリ設定を取得
+    private async Task LoadCategoriesFromFirestoreAsync()
+    {
+        try
+        {
+            var data = await FirebaseService.GetDataAsync<CategorySettingsData>("settings", "categories");
+            if (data != null)
+            {
+                if (data.DailyCategories?.Count > 0) dailyCategories = data.DailyCategories;
+                if (data.FixedCategories?.Count > 0) fixedCategories = data.FixedCategories;
+                if (data.IncomeCategories?.Count > 0) incomeCategories = data.IncomeCategories;
+            }
+        }
+        catch { }
+    }
+
+    // 入力フォームの初期選択ドロップダウン値をセット
     private void InitFormCategories()
     {
         if (dailyCategories.Any()) newDailyExpenseItem.Category = dailyCategories.First();
@@ -337,6 +376,7 @@ else if (activeModalMode == "固定費")
         if (incomeCategories.Any()) newIncomeItem.Category = incomeCategories.First();
     }
 
+    // カレンダーグリッド（35日分）の計算
     private List<DateTime> CalendarDays
     {
         get
@@ -354,6 +394,7 @@ else if (activeModalMode == "固定費")
         }
     }
 
+    // フィルタリングおよび集計プロパティ
     private IEnumerable<ExpenseItem> SelectedDayItems =>
         expenseItems.Where(x => !x.IsFixed && x.Date.Date == selectedDate.Date);
 
@@ -380,6 +421,7 @@ else if (activeModalMode == "固定費")
     private decimal GetDayExpense(DateTime date) =>
         expenseItems.Where(x => !x.IsFixed && x.Date.Date == date.Date).Sum(x => x.Amount);
 
+    // イベントハンドラー
     private void SelectDate(DateTime date)
     {
         selectedDate = date;
@@ -403,7 +445,7 @@ else if (activeModalMode == "固定費")
             IsFixed = false
         });
 
-        await SaveDataToLocalStorage();
+        await SaveAccountDataAsync();
         newDailyExpenseItem = new ExpenseItem { Category = dailyCategories.FirstOrDefault() ?? "食費" };
     }
 
@@ -421,7 +463,7 @@ else if (activeModalMode == "固定費")
             IsFixed = true
         });
 
-        await SaveDataToLocalStorage();
+        await SaveAccountDataAsync();
         newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
         activeModalMode = "なし";
     }
@@ -429,7 +471,7 @@ else if (activeModalMode == "固定費")
     private async Task DeleteExpense(Guid id)
     {
         expenseItems.RemoveAll(x => x.Id == id);
-        await SaveDataToLocalStorage();
+        await SaveAccountDataAsync();
     }
 
     private async Task AddIncome()
@@ -445,7 +487,7 @@ else if (activeModalMode == "固定費")
             Memo = newIncomeItem.Memo
         });
 
-        await SaveDataToLocalStorage();
+        await SaveAccountDataAsync();
         newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
         activeModalMode = "なし";
     }
@@ -453,45 +495,31 @@ else if (activeModalMode == "固定費")
     private async Task DeleteIncome(Guid id)
     {
         incomeItems.RemoveAll(x => x.Id == id);
-        await SaveDataToLocalStorage();
+        await SaveAccountDataAsync();
     }
 
-    // LocalStorage から Firebase への保存・読み込み処理に変更
-    private async Task SaveDataToLocalStorage()
+    // --- Firestore とのデータ連携（保存・取得） ---
+
+    private async Task SaveAccountDataAsync()
     {
-        // 支出データ
-        await Firebase.SaveDataAsync("account_data", "expenses", expenseItems);
-        // 収入データ
-        await Firebase.SaveDataAsync("account_data", "incomes", incomeItems);
+        await FirebaseService.SaveDataAsync("account_data", "expenses", expenseItems);
+        await FirebaseService.SaveDataAsync("account_data", "incomes", incomeItems);
     }
 
-    private async Task LoadDataFromLocalStorage()
+    private async Task LoadAccountDataAsync()
     {
         try
         {
-            var loadedExpenses = await Firebase.GetDataAsync<List<ExpenseItem>>("account_data", "expenses");
+            var loadedExpenses = await FirebaseService.GetDataAsync<List<ExpenseItem>>("account_data", "expenses");
             if (loadedExpenses != null) expenseItems = loadedExpenses;
 
-            var loadedIncomes = await Firebase.GetDataAsync<List<IncomeItem>>("account_data", "incomes");
+            var loadedIncomes = await FirebaseService.GetDataAsync<List<IncomeItem>>("account_data", "incomes");
             if (loadedIncomes != null) incomeItems = loadedIncomes;
-
-            // カテゴリ設定は今まで通りLocalStorageから取得
-            var dailyJson = await JS.InvokeAsync<string>("localStorage.getItem", "dailyCategories");
-            if (!string.IsNullOrEmpty(dailyJson))
-                dailyCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dailyJson) ?? dailyCategories;
-
-            var fixedJson = await JS.InvokeAsync<string>("localStorage.getItem", "fixedCategories");
-            if (!string.IsNullOrEmpty(fixedJson))
-                fixedCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(fixedJson) ?? fixedCategories;
-
-            var incomeCategoryJson = await JS.InvokeAsync<string>("localStorage.getItem", "incomeCategories");
-            if (!string.IsNullOrEmpty(incomeCategoryJson))
-                incomeCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(incomeCategoryJson) ?? incomeCategories;
         }
         catch { }
     }
 
-
+    // 祝日判定ロジック
     private string GetHolidayName(DateTime date)
     {
         int month = date.Month;
@@ -520,6 +548,7 @@ else if (activeModalMode == "固定費")
     private bool isNthDayOfWeek(DateTime date, int nth, DayOfWeek dayOfWeek) =>
         date.DayOfWeek == dayOfWeek && (date.Day - 1) / 7 + 1 == nth;
 
+    // データモデル定義
     public class ExpenseItem
     {
         public Guid Id { get; set; }

@@ -1,6 +1,8 @@
 ﻿@page "/settings"
+@using QOL_Upper_App_v3.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject FirebaseService FirebaseService
 
 <PageTitle>設定 - QOL爆上げ大作戦</PageTitle>
 
@@ -172,11 +174,19 @@
     private string newFixedCategory = "";
     private string newIncomeCategory = "";
 
+    // データモデル（Firestore保存用の1個のクラス）
+    public class CategorySettingsData
+    {
+        public List<string> DailyCategories { get; set; } = new();
+        public List<string> FixedCategories { get; set; } = new();
+        public List<string> IncomeCategories { get; set; } = new();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadCategoriesFromLocalStorage();
+            await LoadCategoriesFromFirestore();
             ResetTempData();
             StateHasChanged();
         }
@@ -230,10 +240,15 @@
         savedFixedCategories = new List<string>(tempFixedCategories);
         savedIncomeCategories = new List<string>(tempIncomeCategories);
 
-        // LocalStorageに保存
-        await JS.InvokeVoidAsync("localStorage.setItem", "dailyCategories", System.Text.Json.JsonSerializer.Serialize(savedDailyCategories));
-        await JS.InvokeVoidAsync("localStorage.setItem", "fixedCategories", System.Text.Json.JsonSerializer.Serialize(savedFixedCategories));
-        await JS.InvokeVoidAsync("localStorage.setItem", "incomeCategories", System.Text.Json.JsonSerializer.Serialize(savedIncomeCategories));
+        var dataToSave = new CategorySettingsData
+        {
+            DailyCategories = savedDailyCategories,
+            FixedCategories = savedFixedCategories,
+            IncomeCategories = savedIncomeCategories
+        };
+
+        // Firestoreに保存（settings コレクションの categories ドキュメント）
+        await FirebaseService.SaveDataAsync("settings", "categories", dataToSave);
 
         showSavedAlert = true;
         StateHasChanged();
@@ -245,21 +260,18 @@
         showSavedAlert = false;
     }
 
-    private async Task LoadCategoriesFromLocalStorage()
+    private async Task LoadCategoriesFromFirestore()
     {
         try
         {
-            var dailyJson = await JS.InvokeAsync<string>("localStorage.getItem", "dailyCategories");
-            if (!string.IsNullOrEmpty(dailyJson))
-                savedDailyCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(dailyJson) ?? savedDailyCategories;
-
-            var fixedJson = await JS.InvokeAsync<string>("localStorage.getItem", "fixedCategories");
-            if (!string.IsNullOrEmpty(fixedJson))
-                savedFixedCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(fixedJson) ?? savedFixedCategories;
-
-            var incomeJson = await JS.InvokeAsync<string>("localStorage.getItem", "incomeCategories");
-            if (!string.IsNullOrEmpty(incomeJson))
-                savedIncomeCategories = System.Text.Json.JsonSerializer.Deserialize<List<string>>(incomeJson) ?? savedIncomeCategories;
+            // Firestoreからデータを取得
+            var data = await FirebaseService.GetDataAsync<CategorySettingsData>("settings", "categories");
+            if (data != null)
+            {
+                if (data.DailyCategories?.Count > 0) savedDailyCategories = data.DailyCategories;
+                if (data.FixedCategories?.Count > 0) savedFixedCategories = data.FixedCategories;
+                if (data.IncomeCategories?.Count > 0) savedIncomeCategories = data.IncomeCategories;
+            }
         }
         catch { }
     }
