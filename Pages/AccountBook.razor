@@ -466,6 +466,8 @@ else if (activeModalMode == "固定費")
         await SaveAccountDataAsync();
         newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
         activeModalMode = "なし";
+
+        CloseModal(); // モーダルを閉じる
     }
 
     private async Task DeleteExpense(Guid id)
@@ -490,6 +492,8 @@ else if (activeModalMode == "固定費")
         await SaveAccountDataAsync();
         newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
         activeModalMode = "なし";
+
+        CloseModal(); // モーダルを閉じる)
     }
 
     private async Task DeleteIncome(Guid id)
@@ -566,5 +570,12 @@ else if (activeModalMode == "固定費")
         public string Category { get; set; } = "給料";
         public decimal Amount { get; set; }
         public string? Memo { get; set; }
+    }
+
+    // 1. モーダルを閉じて画面を確実に再描画するメソッドを追加
+    private void CloseModal()
+    {
+        activeModalMode = "なし";
+        StateHasChanged(); // ★これによって本番環境でも強制的にUIを再描画させてモーダルを消す！
     }
 }
