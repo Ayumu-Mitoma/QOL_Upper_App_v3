@@ -239,11 +239,11 @@
 <!-- モーダルダイアログ：収入入力 -->
 @if (activeModalMode == "収入")
 {
-    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+    <div class="modal-overlay" @onclick="CloseModal">
         <div class="modal-card" @onclick:stopPropagation>
             <div class="card-title" style="margin-bottom: 20px;">
                 <span>💰 今月の収入を入力</span>
-                <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+                <button class="btn-close" @onclick="CloseModal">✕</button>
             </div>
             <EditForm Model="newIncomeItem" OnValidSubmit="AddIncome">
                 <div class="vertical-form-grid">
@@ -276,11 +276,11 @@
 <!-- モーダルダイアログ：固定費入力 -->
 else if (activeModalMode == "固定費")
 {
-<div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+<div class="modal-overlay" @onclick="CloseModal">
     <div class="modal-card" @onclick:stopPropagation>
         <div class="card-title" style="margin-bottom: 20px;">
             <span>💳 今月の固定費を入力</span>
-            <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+            <button class="btn-close" @onclick="CloseModal">✕</button>
         </div>
         <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
             <div class="vertical-form-grid">
