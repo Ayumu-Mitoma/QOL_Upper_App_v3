@@ -95,7 +95,7 @@
                                 <span>今月の収入</span>
                                 <div class="text-success" style="font-size: 1.05rem;">+¥@CurrentMonthIncome.ToString("N0")</div>
                             </div>
-                            <button class="btn-action-small" @onclick='() => activeModalMode = "収入"'>＋ 収入を入力</button>
+                            <button class="btn-action-small" @onclick="OpenIncomeModal">＋ 収入を入力</button>
                         </div>
                         @if (!CurrentMonthIncomeItems.Any())
                         {
@@ -128,7 +128,7 @@
                                 <span>今月の固定費</span>
                                 <div class="text-danger" style="font-size: 1.05rem;">-¥@CurrentMonthFixedExpense.ToString("N0")</div>
                             </div>
-                            <button class="btn-action-small" @onclick='() => activeModalMode = "固定費"'>＋ 固定費を入力</button>
+                            <button class="btn-action-small" @onclick="OpenFixedExpenseModal">＋ 固定費を入力</button>
                         </div>
                         @if (!CurrentMonthFixedItems.Any())
                         {
@@ -237,7 +237,7 @@
 </div>
 
 <!-- モーダルダイアログ：収入入力 -->
-@if (activeModalMode == "収入")
+@if (isIncomeModalOpen)
 {
     <div class="modal-overlay" @onclick="CloseModal">
         <div class="modal-card" @onclick:stopPropagation>
@@ -274,7 +274,7 @@
     </div>
 }
 <!-- モーダルダイアログ：固定費入力 -->
-else if (activeModalMode == "固定費")
+else if (isFixedExpenseModalOpen)
 {
 <div class="modal-overlay" @onclick="CloseModal">
     <div class="modal-card" @onclick:stopPropagation>
@@ -313,6 +313,9 @@ else if (activeModalMode == "固定費")
 
 @code {
     // 状態管理用フィールド
+    private bool isIncomeModalOpen = false;
+    private bool isFixedExpenseModalOpen = false;
+
     private DateTime currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime selectedDate = DateTime.Today;
 
@@ -340,14 +343,32 @@ else if (activeModalMode == "固定費")
         public List<string> IncomeCategories { get; set; } = new();
     }
 
+    private void OpenIncomeModal()
+    {
+        isIncomeModalOpen = true;
+        isFixedExpenseModalOpen = false;
+        StateHasChanged();
+    }
+
+    private void OpenFixedExpenseModal()
+    {
+        isFixedExpenseModalOpen = true;
+        isIncomeModalOpen = false;
+        StateHasChanged();
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Firestoreから収支データとカテゴリ設定を読み込む
+            // 初回読み込み時は必ずモーダルを閉じた状態にセット
+            isIncomeModalOpen = false;
+            isFixedExpenseModalOpen = false;
+
             await LoadAccountDataAsync();
             await LoadCategoriesFromFirestoreAsync();
             InitFormCategories();
+
             StateHasChanged();
         }
     }
@@ -465,9 +486,8 @@ else if (activeModalMode == "固定費")
 
         await SaveAccountDataAsync();
         newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
-        activeModalMode = "なし";
 
-        CloseModal(); // モーダルを閉じる
+        CloseModal(); // 確実に閉じる
     }
 
     private async Task DeleteExpense(Guid id)
@@ -491,9 +511,8 @@ else if (activeModalMode == "固定費")
 
         await SaveAccountDataAsync();
         newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
-        activeModalMode = "なし";
 
-        CloseModal(); // モーダルを閉じる)
+        CloseModal(); // 確実に閉じる
     }
 
     private async Task DeleteIncome(Guid id)
