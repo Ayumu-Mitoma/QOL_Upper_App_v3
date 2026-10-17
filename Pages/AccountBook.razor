@@ -18,18 +18,18 @@
 
             <!-- 月間サマリーカード -->
             <div class="card monthly-summary-card">
-                <h3 class="card-title" style="margin-bottom: 12px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
+                <h3 class="card-title" style="margin-bottom: 8px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
 
                 <div class="summary-grid">
-                    <div class="summary-box">
+                    <div class="summary-box summary-income">
                         <span class="summary-label">今月の収入</span>
                         <span class="summary-val text-success">+¥@CurrentMonthIncome.ToString("N0")</span>
                     </div>
-                    <div class="summary-box">
+                    <div class="summary-box summary-expense">
                         <span class="summary-label">今月の総支出</span>
                         <span class="summary-val text-danger">-¥@MonthlyTotalExpense.ToString("N0")</span>
                     </div>
-                    <div class="summary-box">
+                    <div class="summary-box summary-balance">
                         <span class="summary-label">収支バランス</span>
                         <span class="summary-val @(MonthlyNetBalance >= 0 ? "text-success" : "text-danger")">
                             @(MonthlyNetBalance >= 0 ? "+" : "")¥@MonthlyNetBalance.ToString("N0")
@@ -75,7 +75,7 @@
                             }
                             @if (dayExpense > 0)
                             {
-                                <span class="day-expense">-¥@dayExpense.ToString("N0")</span>
+                                <span class="day-expense">¥@dayExpense.ToString("N0")</span>
                             }
                         </div>
                     }
@@ -92,10 +92,10 @@
                     <div class="breakdown-column">
                         <div class="breakdown-header">
                             <div>
-                                <span>今月の収入</span>
-                                <div class="text-success" style="font-size: 1.05rem;">+¥@CurrentMonthIncome.ToString("N0")</div>
+                                <span class="breakdown-title">今月の収入</span>
+                                <div class="breakdown-amount text-success">+¥@CurrentMonthIncome.ToString("N0")</div>
                             </div>
-                            <button class="btn-action-small" @onclick="OpenIncomeModal">＋ 収入を入力</button>
+                            <button class="btn-action-small" @onclick='() => activeModalMode = "収入"'>＋ 収入を入力</button>
                         </div>
                         @if (!CurrentMonthIncomeItems.Any())
                         {
@@ -125,10 +125,10 @@
                     <div class="breakdown-column">
                         <div class="breakdown-header">
                             <div>
-                                <span>今月の固定費</span>
-                                <div class="text-danger" style="font-size: 1.05rem;">-¥@CurrentMonthFixedExpense.ToString("N0")</div>
+                                <span class="breakdown-title">今月の固定費</span>
+                                <div class="breakdown-amount text-danger">-¥@CurrentMonthFixedExpense.ToString("N0")</div>
                             </div>
-                            <button class="btn-action-small" @onclick="OpenFixedExpenseModal">＋ 固定費を入力</button>
+                            <button class="btn-action-small" @onclick='() => activeModalMode = "固定費"'>＋ 固定費を入力</button>
                         </div>
                         @if (!CurrentMonthFixedItems.Any())
                         {
@@ -237,13 +237,13 @@
 </div>
 
 <!-- モーダルダイアログ：収入入力 -->
-@if (isIncomeModalOpen)
+@if (activeModalMode == "収入")
 {
-    <div class="modal-overlay" @onclick="CloseModal">
+    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
         <div class="modal-card" @onclick:stopPropagation>
             <div class="card-title" style="margin-bottom: 20px;">
                 <span>💰 今月の収入を入力</span>
-                <button class="btn-close" @onclick="CloseModal">✕</button>
+                <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
             </div>
             <EditForm Model="newIncomeItem" OnValidSubmit="AddIncome">
                 <div class="vertical-form-grid">
@@ -274,13 +274,13 @@
     </div>
 }
 <!-- モーダルダイアログ：固定費入力 -->
-@if (isFixedExpenseModalOpen)
+@if (activeModalMode == "固定費")
 {
-<div class="modal-overlay" @onclick="CloseModal">
+<div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
     <div class="modal-card" @onclick:stopPropagation>
         <div class="card-title" style="margin-bottom: 20px;">
             <span>💳 今月の固定費を入力</span>
-            <button class="btn-close" @onclick="CloseModal">✕</button>
+            <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
         </div>
         <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
             <div class="vertical-form-grid">
@@ -313,9 +313,6 @@
 
 @code {
     // 状態管理用フィールド
-    private bool isIncomeModalOpen = false;
-    private bool isFixedExpenseModalOpen = false;
-
     private DateTime currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateTime selectedDate = DateTime.Today;
 
@@ -343,28 +340,10 @@
         public List<string> IncomeCategories { get; set; } = new();
     }
 
-    private void OpenIncomeModal()
-    {
-        isIncomeModalOpen = true;
-        isFixedExpenseModalOpen = false;
-        StateHasChanged();
-    }
-
-    private void OpenFixedExpenseModal()
-    {
-        isFixedExpenseModalOpen = true;
-        isIncomeModalOpen = false;
-        StateHasChanged();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // 初回読み込み時は必ずモーダルを閉じた状態にセット
-            isIncomeModalOpen = false;
-            isFixedExpenseModalOpen = false;
-
             await LoadAccountDataAsync();
             await LoadCategoriesFromFirestoreAsync();
             InitFormCategories();
@@ -486,8 +465,6 @@
 
         await SaveAccountDataAsync();
         newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
-
-        CloseModal(); // 確実に閉じる
     }
 
     private async Task DeleteExpense(Guid id)
@@ -511,8 +488,6 @@
 
         await SaveAccountDataAsync();
         newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
-
-        CloseModal(); // 確実に閉じる
     }
 
     private async Task DeleteIncome(Guid id)
@@ -589,12 +564,5 @@
         public string Category { get; set; } = "給料";
         public decimal Amount { get; set; }
         public string? Memo { get; set; }
-    }
-
-    // 1. モーダルを閉じて画面を確実に再描画するメソッドを追加
-    private void CloseModal()
-    {
-        activeModalMode = "なし";
-        StateHasChanged(); // ★これによって本番環境でも強制的にUIを再描画させてモーダルを消す！
     }
 }

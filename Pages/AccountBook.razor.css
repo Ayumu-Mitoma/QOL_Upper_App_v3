@@ -576,10 +576,47 @@
     font-size: 0.85rem;
 }
 
+/* モーダルの最前面表示とタップイベントを絶対に保証する記述 */
+.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    z-index: 9999 !important; /* 最前面を確実に保証 */
+    pointer-events: auto !important; /* タップイベントを確実に拾う */
+}
+
+.modal-card {
+    background: #fff !important;
+    padding: 20px !important;
+    border-radius: 12px !important;
+    width: 90% !important;
+    max-width: 400px !important;
+    z-index: 10000 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ✕ボタンのタップ領域をしっかり確保 */
+.btn-close {
+    background: transparent !important;
+    border: none !important;
+    font-size: 1.2rem !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+}
+
 /* スマホ表示（画面幅 768px 以下） */
 @media (max-width: 768px) {
-    .app-container {
-        padding: 12px;
+    /* システム標準の見やすいフォントを適用 */
+    body, .app-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        padding: 4px;
         width: 100%;
         box-sizing: border-box;
     }
@@ -591,7 +628,7 @@
     .main-layout {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 10px; /* カード間の隙間を少し詰める */
         width: 100%;
         max-width: 100% !important;
     }
@@ -600,12 +637,23 @@
         display: contents;
     }
 
+    /* カード本体の内部パディングと文字の太さ統一 */
     .card {
         width: 100%;
         box-sizing: border-box;
         margin-bottom: 0;
+        padding: 10px 8px !important;
+        font-weight: 400 !important;
     }
 
+    /* 各カードタイトルの統一設定 */
+    .card-title {
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* 表示順序の定義 */
     .monthly-summary-card {
         order: 1;
     }
@@ -631,24 +679,131 @@
         gap: 12px;
     }
 
+    /* --- 1. 月間サマリー（3列均等配置） --- */
+    .summary-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 4px !important;
+        padding: 0 !important;
+    }
+
+    .summary-box {
+        padding: 6px 2px !important;
+        text-align: center;
+        box-sizing: border-box !important;
+    }
+
+    .summary-label {
+        font-size: 0.72rem !important;
+        font-weight: 400 !important;
+        white-space: nowrap;
+    }
+
+    .summary-val {
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        white-space: nowrap;
+        letter-spacing: -0.3px;
+    }
+
+    /* --- 2. カレンダー --- */
+    .calendar-header {
+        margin-bottom: 8px !important;
+    }
+
+    .month-title {
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+    }
+
+    .btn-nav {
+        font-size: 0.75rem !important;
+        padding: 4px 8px !important;
+    }
+
     .calendar-grid {
-        gap: 3px;
+        gap: 1px !important;
+        padding: 0 !important;
+    }
+
+    .weekday-header {
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        padding: 2px 0 !important;
     }
 
     .calendar-cell {
-        min-height: 48px;
-        padding: 3px;
+        min-height: 46px;
+        padding: 2px 1px !important;
+        font-weight: 400 !important;
     }
 
     .day-number {
-        font-size: 0.8rem;
+        font-size: 0.78rem !important;
+        font-weight: 400 !important;
     }
 
     .day-expense {
-        font-size: 0.65rem;
+        font-size: 0.68rem !important;
+        font-weight: 500 !important;
+        white-space: nowrap;
+        letter-spacing: -0.3px;
     }
 
     .holiday-name {
-        font-size: 0.55rem;
+        font-size: 0.55rem !important;
+        font-weight: 400 !important;
+    }
+
+    /* --- 3. 明細・フォーム・その他パーツ --- */
+    .selected-date-text {
+        font-size: 0.85rem !important;
+    }
+
+    .item-row {
+        padding: 6px 4px !important;
+    }
+
+    .badge {
+        font-size: 0.7rem !important;
+        font-weight: 400 !important;
+    }
+
+    .item-memo {
+        font-size: 0.8rem !important;
+    }
+
+    .item-amount {
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+    }
+
+    .custom-input, .custom-input-number {
+        font-size: 0.85rem !important;
+        padding: 6px 8px !important;
+    }
+
+    .btn-primary, .btn-success, .btn-fixed {
+        font-size: 0.85rem !important;
+        padding: 8px 12px !important;
+        font-weight: 500 !important;
+    }
+
+    /* 内訳カード（収入・固定費）のタイトル文字 */
+    .breakdown-title {
+        font-size: 0.78rem !important;
+        font-weight: 400 !important;
+    }
+
+    /* 内訳カード（収入・固定費）の金額 */
+    .breakdown-amount {
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+    }
+
+    /* 入力ボタンのサイズ調整 */
+    .btn-action-small {
+        font-size: 0.75rem !important;
+        padding: 4px 8px !important;
     }
 }
