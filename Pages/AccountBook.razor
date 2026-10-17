@@ -274,7 +274,7 @@
     </div>
 }
 <!-- モーダルダイアログ：固定費入力 -->
-else if (isFixedExpenseModalOpen)
+@if (isFixedExpenseModalOpen)
 {
 <div class="modal-overlay" @onclick="CloseModal">
     <div class="modal-card" @onclick:stopPropagation>
