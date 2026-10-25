@@ -81,6 +81,18 @@
     justify-content: space-between;
 }
 
+/* タイトルとバツ印を横並びにして両端に配置 */
+.card-title-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+    /* h3 の余計なマージンを消して高さを揃える */
+    .card-title-header .card-title {
+        margin: 0 !important;
+    }
 /* 収支合計 */
 .monthly-summary-card {
     background-color: #FFFDF9;
@@ -302,6 +314,29 @@
         background-color: var(--primary-brown);
         color: #FFF;
     }
+
+/* 編集ボタンのスタイル */
+.btn-edit {
+    background: transparent;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-right: 2px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+    .btn-edit:hover {
+        opacity: 1;
+    }
+
+/* 明細アクション列の配置調整 */
+.item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
 
 /* 右側パネル */
 .selected-day-banner {
@@ -663,11 +698,11 @@
     }
 
     .list-card {
-        order: 3;
+        order: 4;
     }
 
     .form-card {
-        order: 4;
+        order: 3;
     }
 
     .month-setting-card {
@@ -805,5 +840,10 @@
     .btn-action-small {
         font-size: 0.75rem !important;
         padding: 4px 8px !important;
+    }
+
+    /* 自動ズーム防止のため、16px（1rem）以上を確保 */
+    .custom-input, .custom-input-number, select {
+        font-size: 16px !important;
     }
 }

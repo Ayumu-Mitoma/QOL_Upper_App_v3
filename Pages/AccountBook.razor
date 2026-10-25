@@ -162,6 +162,44 @@
         @if (showDailyExpenseSection)
         {
             <section class="right-panel">
+                <div class="card form-card">
+                    <div class="card-title-header">
+                        <h3 class="card-title">💸 支出を入力</h3>
+                        <button class="btn-close" title="明細と入力欄を閉じる" @onclick="() => showDailyExpenseSection = false">✕</button>
+                    </div>
+
+                    <EditForm Model="newDailyExpenseItem" OnValidSubmit="AddDailyExpense">
+                        <div class="vertical-form-grid">
+                            <div class="form-group">
+                                <label>カテゴリ</label>
+                                <select class="custom-input" @bind="newDailyExpenseItem.Category">
+                                    @foreach (var cat in dailyCategories)
+                                    {
+                                        <option value="@cat">@cat</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>金額 (円)</label>
+                                <input type="number"
+                                       class="custom-input-number"
+                                       @bind="newDailyExpenseItem.Amount"
+                                       placeholder="0"
+                                       min="0"
+                                       onfocus="this.select();" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>メモ</label>
+                                <input type="text" class="custom-input" @bind="newDailyExpenseItem.Memo" placeholder="例: スーパーで買出し" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary">本日の支出に追加する</button>
+                    </EditForm>
+                </div>
+
                 <div class="card list-card">
                     <div class="selected-day-banner" style="margin-bottom: 12px;">
                         <span class="selected-date-text">
@@ -174,7 +212,6 @@
 
                     <div class="card-title">
                         <span>📋 本日 (@selectedDate.ToString("MM/dd")) の支出明細</span>
-                        <button class="btn-close" title="明細と入力欄を閉じる" @onclick="() => showDailyExpenseSection = false">✕</button>
                     </div>
 
                     @if (!SelectedDayItems.Any())
@@ -193,42 +230,13 @@
                                     </div>
                                     <div class="item-actions">
                                         <span class="item-amount text-danger">-¥@item.Amount.ToString("N0")</span>
-                                        <button class="btn-delete" @onclick="() => DeleteExpense(item.Id)">×</button>
+                                        <button class="btn-edit" title="編集" @onclick="() => OpenEditExpenseModal(item)">✏️</button>
+                                        <button class="btn-delete" title="削除" @onclick="() => DeleteExpense(item.Id)">×</button>
                                     </div>
                                 </li>
                             }
                         </ul>
                     }
-                </div>
-
-                <div class="card form-card">
-                    <h3 class="card-title">💸 支出を入力</h3>
-
-                    <EditForm Model="newDailyExpenseItem" OnValidSubmit="AddDailyExpense">
-                        <div class="vertical-form-grid">
-                            <div class="form-group">
-                                <label>カテゴリ</label>
-                                <select class="custom-input" @bind="newDailyExpenseItem.Category">
-                                    @foreach (var cat in dailyCategories)
-                                    {
-                                        <option value="@cat">@cat</option>
-                                    }
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label>金額 (円)</label>
-                                <input type="number" class="custom-input-number" @bind="newDailyExpenseItem.Amount" placeholder="0" min="0" />
-                            </div>
-
-                            <div class="form-group">
-                                <label>メモ</label>
-                                <input type="text" class="custom-input" @bind="newDailyExpenseItem.Memo" placeholder="例: スーパーで買出し" />
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn-primary">本日の支出に追加する</button>
-                    </EditForm>
                 </div>
             </section>
         }
@@ -258,7 +266,12 @@
 
                     <div class="form-group">
                         <label>金額 (円)</label>
-                        <input type="number" class="custom-input-number" @bind="newIncomeItem.Amount" placeholder="0" min="0" />
+                        <input type="number"
+                               class="custom-input-number"
+                               @bind="newDailyExpenseItem.Amount"
+                               placeholder="0"
+                               min="0"
+                               onfocus="this.select();" />
                     </div>
 
                     <div class="form-group">
@@ -295,7 +308,12 @@
 
                 <div class="form-group">
                     <label>金額 (円)</label>
-                    <input type="number" class="custom-input-number" @bind="newFixedExpenseItem.Amount" placeholder="0" min="0" />
+                        <input type="number"
+                               class="custom-input-number"
+                               @bind="newDailyExpenseItem.Amount"
+                               placeholder="0"
+                               min="0"
+                               onfocus="this.select();" />
                 </div>
 
                 <div class="form-group">
@@ -308,6 +326,49 @@
         </EditForm>
     </div>
 </div>
+}
+
+<!-- モーダルダイアログ：支出の編集 -->
+@if (activeModalMode == "支出編集")
+{
+    <div class="modal-overlay" @onclick='() => activeModalMode = "なし"'>
+        <div class="modal-card" @onclick:stopPropagation>
+            <div class="card-title" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <span>✏️ 支出明細の編集</span>
+                <button type="button" class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
+            </div>
+            <EditForm Model="editingExpenseItem" OnValidSubmit="UpdateExpense">
+                <div class="vertical-form-grid">
+                    <div class="form-group">
+                        <label>カテゴリ</label>
+                        <select class="custom-input" @bind="editingExpenseItem.Category">
+                            @foreach (var cat in dailyCategories)
+                            {
+                                <option value="@cat">@cat</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>金額 (円)</label>
+                        <input type="number"
+                               class="custom-input-number"
+                               @bind="editingExpenseItem.Amount"
+                               placeholder="0"
+                               min="0"
+                               onfocus="this.select();" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>メモ</label>
+                        <input type="text" class="custom-input" @bind="editingExpenseItem.Memo" placeholder="メモを入力" />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="margin-top: 15px; width: 100%;">変更を保存する</button>
+            </EditForm>
+        </div>
+    </div>
 }
 
 @code {
@@ -330,6 +391,9 @@
     private ExpenseItem newDailyExpenseItem = new();
     private ExpenseItem newFixedExpenseItem = new();
     private IncomeItem newIncomeItem = new();
+
+    // 編集対象のアイテムを保持するオブジェクト
+    private ExpenseItem editingExpenseItem = new ExpenseItem();
 
     // Firestore保存用データ構造
     public class CategorySettingsData
@@ -563,5 +627,43 @@
         public string Category { get; set; } = "給料";
         public decimal Amount { get; set; }
         public string? Memo { get; set; }
+    }
+
+    // 編集モーダルを開く
+    private void OpenEditExpenseModal(ExpenseItem item)
+    {
+        // 参照を切ってディープコピー（キャンセル時に元データへ影響させないため）
+        editingExpenseItem = new ExpenseItem
+        {
+            Id = item.Id,
+            Date = item.Date,
+            Category = item.Category,
+            Amount = item.Amount,
+            Memo = item.Memo,
+            IsFixed = item.IsFixed
+        };
+
+        activeModalMode = "支出編集";
+    }
+
+    // 編集内容を保存（Firestore更新）
+    private async Task UpdateExpense()
+    {
+        if (editingExpenseItem.Amount <= 0) return;
+
+        // メモリ上のリストから対象アイテムを探して更新
+        var targetIndex = expenseItems.FindIndex(x => x.Id == editingExpenseItem.Id);
+        if (targetIndex != -1)
+        {
+            expenseItems[targetIndex].Category = editingExpenseItem.Category;
+            expenseItems[targetIndex].Amount = editingExpenseItem.Amount;
+            expenseItems[targetIndex].Memo = editingExpenseItem.Memo;
+
+            // Firestoreへ保存
+            await SaveAccountDataAsync();
+        }
+
+        // モーダルを閉じる
+        activeModalMode = "なし";
     }
 }

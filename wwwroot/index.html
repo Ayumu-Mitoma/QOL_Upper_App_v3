@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>QOL爆上げアプリ</title>
 
     <!-- JSによる動的生成をやめ、直接ベースパスを指定 -->
@@ -39,63 +39,99 @@
     <!-- Firebase SDK (Compat版) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-                      // ★ Firebaseコンソールからコピーした自分の設定値を入れる
-const firebaseConfig = {
+        // ★ Firebaseコンソールからコピーした自分の設定値を入れる
+        const firebaseConfig = {
             apiKey: "AIzaSyDrh51GJLmOAFQR5XkoIU9rxTgCcuA3oXY",
             authDomain: "qol-upper-app.firebaseapp.com",
             projectId: "qol-upper-app",
             storageBucket: "qol-upper-app.firebasestorage.app",
             messagingSenderId: "424123249694",
             appId: "1:424123249694:web:f023d112c9877a0e3d6a0f"
-};
+        };
 
-                      // Firebaseの初期化
-                      if (!firebase.apps.length) {
-                        firebase.initializeApp(firebaseConfig);
-                      }
-                      const db = firebase.firestore();
+        // Firebaseの初期化
+        if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
 
-                      // C# から呼び出すFirebase連携関数
-                      window.firebaseInterop = {
-                        saveData: async function (collectionName, docId, jsonString) {
-                          try {
-                            const parsedData = JSON.parse(jsonString);
-                            const payload = Array.isArray(parsedData)
-                              ? { items: parsedData }
-                              : parsedData;
+        // C# から呼び出すFirebase連携関数
+        window.firebaseInterop = {
+            saveData: async function (collectionName, docId, jsonString) {
+                try {
+                    const parsedData = JSON.parse(jsonString);
+                    const payload = Array.isArray(parsedData)
+                        ? { items: parsedData }
+                        : parsedData;
 
-                            await db.collection(collectionName).doc(docId).set(payload);
-                            console.log("Firebase Save Success:", collectionName, docId);
-                            return true;
-                          } catch (e) {
-                            console.error("Firebase Save Error:", e);
-                            return false;
-                          }
-                        },
+                    await db.collection(collectionName).doc(docId).set(payload);
+                    console.log("Firebase Save Success:", collectionName, docId);
+                    return true;
+                } catch (e) {
+                    console.error("Firebase Save Error:", e);
+                    return false;
+                }
+            },
 
-                        getData: async function (collectionName, docId) {
-                          try {
-                            const doc = await db.collection(collectionName).doc(docId).get();
-                            if (doc.exists) {
-                              const data = doc.data();
-                              const result = data.items !== undefined ? data.items : data;
-                              return JSON.stringify(result);
-                            }
-                            return null;
-                          } catch (e) {
-                            console.error("Firebase Get Error:", e);
-                            return null;
-                          }
+            getData: async function (collectionName, docId) {
+                try {
+                    const doc = await db.collection(collectionName).doc(docId).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const result = data.items !== undefined ? data.items : data;
+                        return JSON.stringify(result);
+                    }
+                    return null;
+                } catch (e) {
+                    console.error("Firebase Get Error:", e);
+                    return null;
+                }
+            }
+        };
+
+        let myChart = null;
+
+        window.renderCategoryChart = (labels, data) => {
+            const ctx = document.getElementById('categoryChart');
+            if (!ctx) return;
+
+            // 既存のグラフがあれば破棄して再描画
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#C9CBCCF', '#8AE234'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
                         }
-                      };
+                    }
+                }
+            });
+        };
     </script>
 
     <!-- autostart="false" にして、JS側から Blazor を明示的に起動させる -->
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script>
-              Blazor.start();
+                      Blazor.start();
     </script>
 </body>
 
