@@ -1,0 +1,154 @@
+﻿@page "/analytics"
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="app-container">
+    <!-- ヘッダーエリア（戻るボタン） -->
+    <div class="analytics-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button class="btn-secondary" @onclick='() => Navigation.NavigateTo("/")'>
+            ⬅ カレンダーに戻る
+        </button>
+        <h2 style="margin: 0; font-size: 1.2rem;">📊 変動費カテゴリ別分析</h2>
+    </div>
+
+    <!-- メインカード -->
+    <div class="card analytics-card">
+        <div class="month-selector" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <button class="btn-nav" @onclick="PrevMonth">◀ 前月</button>
+            <h3 style="margin: 0;">@targetMonth.ToString("yyyy年MM月")</h3>
+            <button class="btn-nav" @onclick="NextMonth">次月 ▶</button>
+        </div>
+
+        @if (!CategorySummaryList.Any())
+        {
+            <p class="empty-msg" style="text-align: center; padding: 40px 0; color: #888;">
+                この月の変動費（固定費以外の支出）データはありません。
+            </p>
+        }
+        else
+        {
+            <div class="analytics-grid">
+                <!-- Chart.js 描画キャンバス -->
+                <div class="chart-container" style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+
+                <!-- 内訳テーブル -->
+                <div class="summary-table-container">
+                    <table class="summary-table">
+                        <thead>
+                            <tr>
+                                <th>カテゴリ</th>
+                                <th>金額</th>
+                                <th>割合</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in CategorySummaryList)
+                            {
+                                <tr>
+                                    <td><span class="badge">@item.Category</span></td>
+                                    <td class="text-danger" style="font-weight: bold;">¥@item.Amount.ToString("N0")</td>
+                                    <td>@item.Percentage.ToString("F1")%</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>変動費 合計</th>
+                                <th class="text-danger">¥@TotalVariableExpense.ToString("N0")</th>
+                                <th>100.0%</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DateTime targetMonth = DateTime.Today;
+
+    // ※ 実際の実装では、Firestore 等のデータサービスから全支出リストを取得・保持する構造に合わせてね
+    private List<ExpenseItem> allExpenses = new();
+
+    public class CategorySummary
+    {
+        public string Category { get; set; } = "";
+        public decimal Amount { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    private List<CategorySummary> CategorySummaryList = new();
+    private decimal TotalVariableExpense = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. データベース等から支出データをロードする処理を呼び出す
+        // allExpenses = await AccountService.GetExpensesAsync();
+
+        CalculateCategorySummary();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // レンダリング完了後に Chart.js でグラフ描写
+        await RenderChartAsync();
+    }
+
+    private void CalculateCategorySummary()
+    {
+        var variableExpenses = allExpenses
+            .Where(x => x.Date.Year == targetMonth.Year &&
+                        x.Date.Month == targetMonth.Month &&
+                        !x.IsFixed)
+            .ToList();
+
+        TotalVariableExpense = variableExpenses.Sum(x => x.Amount);
+
+        if (TotalVariableExpense > 0)
+        {
+            CategorySummaryList = variableExpenses
+                .GroupBy(x => x.Category)
+                .Select(g => new CategorySummary
+                {
+                    Category = g.Key,
+                    Amount = g.Sum(x => x.Amount),
+                    Percentage = (double)(g.Sum(x => x.Amount) / TotalVariableExpense * 100)
+                })
+                .OrderByDescending(x => x.Amount)
+                .ToList();
+        }
+        else
+        {
+            CategorySummaryList.Clear();
+        }
+    }
+
+    private async Task RenderChartAsync()
+    {
+        if (!CategorySummaryList.Any()) return;
+
+        var labels = CategorySummaryList.Select(x => x.Category).ToArray();
+        var data = CategorySummaryList.Select(x => x.Amount).ToArray();
+
+        await JSRuntime.InvokeVoidAsync("renderCategoryChart", labels, data);
+    }
+
+    private async Task PrevMonth()
+    {
+        targetMonth = targetMonth.AddMonths(-1);
+        CalculateCategorySummary();
+        StateHasChanged();
+        await RenderChartAsync();
+    }
+
+    private async Task NextMonth()
+    {
+        targetMonth = targetMonth.AddMonths(1);
+        CalculateCategorySummary();
+        StateHasChanged();
+        await RenderChartAsync();
+    }
+}

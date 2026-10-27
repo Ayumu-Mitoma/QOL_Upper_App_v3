@@ -3,6 +3,7 @@
 @using QOL_Upper_App_v3.Services
 @inject IJSRuntime JS
 @inject FirebaseService FirebaseService
+@inject NavigationManager Navigation
 
 <PageTitle>QOL爆上げ大作戦</PageTitle>
 
@@ -18,7 +19,12 @@
 
             <!-- 月間サマリーカード -->
             <div class="card monthly-summary-card">
-                <h3 class="card-title" style="margin-bottom: 8px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
+                <div class="card-title-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3 class="card-title" style="margin-bottom: 8px;">📊 @currentMonth.ToString("yyyy/MM") の収支合計</h3>
+                    <button class="btn-analytics-link" @onclick='() => Navigation.NavigateTo("/analytics")'>
+                        📊 支出詳細・分析 ➔
+                    </button>
+                </div>
 
                 <div class="summary-grid">
                     <div class="summary-box summary-income">
@@ -268,7 +274,7 @@
                         <label>金額 (円)</label>
                         <input type="number"
                                class="custom-input-number"
-                               @bind="newDailyExpenseItem.Amount"
+                               @bind="newIncomeItem.Amount"
                                placeholder="0"
                                min="0"
                                onfocus="this.select();" />
@@ -294,7 +300,7 @@
             <span>💳 今月の固定費を入力</span>
             <button class="btn-close" @onclick='() => activeModalMode = "なし"'>✕</button>
         </div>
-        <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
+       <EditForm Model="newFixedExpenseItem" OnValidSubmit="AddFixedExpense">
             <div class="vertical-form-grid">
                 <div class="form-group">
                     <label>カテゴリ</label>
@@ -308,12 +314,12 @@
 
                 <div class="form-group">
                     <label>金額 (円)</label>
-                        <input type="number"
-                               class="custom-input-number"
-                               @bind="newDailyExpenseItem.Amount"
-                               placeholder="0"
-                               min="0"
-                               onfocus="this.select();" />
+                    <input type="number"
+                           class="custom-input-number"
+                           @bind="newFixedExpenseItem.Amount"
+                           placeholder="0"
+                           min="0"
+                           onfocus="this.select();">
                 </div>
 
                 <div class="form-group">
@@ -528,6 +534,9 @@
 
         await SaveAccountDataAsync();
         newFixedExpenseItem = new ExpenseItem { Category = fixedCategories.FirstOrDefault() ?? "電気代" };
+
+        // ★登録完了後にモーダルを閉じる
+        activeModalMode = "なし";
     }
 
     private async Task DeleteExpense(Guid id)
@@ -551,6 +560,9 @@
 
         await SaveAccountDataAsync();
         newIncomeItem = new IncomeItem { Category = incomeCategories.FirstOrDefault() ?? "給料" };
+
+        // ★登録完了後にモーダルを閉じる
+        activeModalMode = "なし";
     }
 
     private async Task DeleteIncome(Guid id)

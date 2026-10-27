@@ -154,8 +154,8 @@
 }
 
     .btn-nav:hover {
-        background-color: var(--primary-brown);
-        color: #FFF;
+        background-color: rgba(124, 94, 16, 0.12);
+        color: #222;
     }
 
 .calendar-grid {
@@ -312,7 +312,7 @@
 
     .btn-action-small:hover {
         background-color: var(--primary-brown);
-        color: #FFF;
+        color: #222;
     }
 
 /* 編集ボタンのスタイル */
@@ -330,6 +330,32 @@
     .btn-edit:hover {
         opacity: 1;
     }
+
+/* 収支サマリーカード内のリンクボタン */
+.btn-analytics-link {
+    background-color: #DFD5C6; /* 背景色に自然に溶け込む半透明 */
+    color: #000; /* カード内のテキスト色に合わせた濃いめのウォームカラー */
+    border: 1px solid rgba(124, 94, 16, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .btn-analytics-link:hover {
+        background-color: rgba(124, 94, 16, 0.12);
+        color: #222;
+    }
+
+/* 分析グリッド (PCで2列、スマホで1列) */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+}
 
 /* 明細アクション列の配置調整 */
 .item-actions {
@@ -439,7 +465,7 @@
 
 .btn-success {
     background-color: var(--success-green);
-    color: #FFF;
+    color: #000;
     border: 2px solid #284730;
     padding: 12px;
     border-radius: 8px;
@@ -453,11 +479,12 @@
 
     .btn-success:hover {
         background-color: #2E5237;
+        color: #000;
     }
 
 .btn-fixed {
     background-color: var(--fixed-orange);
-    color: #FFF;
+    color: #000;
     border: 2px solid #7D351B;
     padding: 12px;
     border-radius: 8px;
@@ -471,6 +498,7 @@
 
     .btn-fixed:hover {
         background-color: #8C3C1E;
+        color: #000;
     }
 
 .btn-close {
@@ -846,4 +874,9 @@
     .custom-input, .custom-input-number, select {
         font-size: 16px !important;
     }
+
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
 }
